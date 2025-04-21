@@ -55,15 +55,17 @@ export const ConversionCard = () => {
       return;
     }
 
+    const SUIRATE = rates.sui * rates.usdc;
+
     let convertedAmount = sendAmount;
 
     // Then convert from USDC to the target currency
     if (receiveCurrency.value === "naira") {
-      convertedAmount = sendAmount * rates.usdc;
-      convertedAmount = convertedAmount / rates.sui;
+      // USDC to SUI: divide by sui rate
+      convertedAmount = convertedAmount * SUIRATE;
     } else if (receiveCurrency.value === "sui") {
       // USDC to SUI: divide by sui rate
-      convertedAmount = convertedAmount / rates.sui;
+      convertedAmount = convertedAmount / SUIRATE;
     } else if (receiveCurrency.value === "usdc") {
       // Keep as USDC
     }
@@ -211,3 +213,10 @@ export const ConversionFlowCard: FC<IConversionFlowCard> = ({
     </Card>
   );
 };
+
+/**
+ * 1Sui -- 2.5 USDT
+ * 1 USDT -- NGN 1,500
+ * 1SUI -- NGN 2.5 * 1500
+ *
+ */

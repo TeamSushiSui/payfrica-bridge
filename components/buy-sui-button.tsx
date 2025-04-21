@@ -59,10 +59,10 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
 
       if (step === 2) {
         timeOut = setTimeout(() => {
-          const o = [3, 4];
+          const o = [2, 3];
 
           if (clientActions.userClaimToHaveMadePayment) {
-            setStep(3);
+            setStep(2);
           } else {
             setStep(Math.floor(Math.random() * o.length));
           }
@@ -113,34 +113,34 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
     setStep(0);
   };
 
-  const selectAgent = (
-    <Fragment>
-      <DialogHeader>
-        <DialogTitle>Select Agent</DialogTitle>
-        <DialogDescription>
-          Select from the available agents below to complete transaction
-        </DialogDescription>
-      </DialogHeader>
-      <Separator />
-      <div className="flex flex-col gap-5">
-        {agents.map((agent, idx) => (
-          <AvailableAgentCard
-            key={idx}
-            {...agent}
-            onAgentSelect={(agent: (typeof agents)[0]) => {
-              setClientActions({ ...clientActions, agentSelected: agent.id });
-              setStep(1);
-            }}
-          />
-        ))}
-      </div>
-      <DialogFooter>
-        <DialogClose asChild>
-          <Button>Close</Button>
-        </DialogClose>
-      </DialogFooter>
-    </Fragment>
-  );
+  //const selectAgent = (
+  //  <Fragment>
+  //    <DialogHeader>
+  //      <DialogTitle>Select Agent</DialogTitle>
+  //      <DialogDescription>
+  //        Select from the available agents below to complete transaction
+  //      </DialogDescription>
+  //    </DialogHeader>
+  //    <Separator />
+  //    <div className="flex flex-col gap-5">
+  //      {agents.map((agent, idx) => (
+  //        <AvailableAgentCard
+  //          key={idx}
+  //          {...agent}
+  //          onAgentSelect={(agent: (typeof agents)[0]) => {
+  //            setClientActions({ ...clientActions, agentSelected: agent.id });
+  //            setStep(1);
+  //          }}
+  //        />
+  //      ))}
+  //    </div>
+  //    <DialogFooter>
+  //      <DialogClose asChild>
+  //        <Button>Close</Button>
+  //      </DialogClose>
+  //    </DialogFooter>
+  //  </Fragment>
+  //);
 
   const makePayment = (
     <Fragment>
@@ -349,7 +349,7 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
   );
 
   const views = [
-    selectAgent,
+    //selectAgent,
     makePayment,
     confirmingPayment,
     paymentConfirmed,
