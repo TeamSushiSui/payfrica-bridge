@@ -213,10 +213,3 @@ export const ConversionFlowCard: FC<IConversionFlowCard> = ({
     </Card>
   );
 };
-
-/**
- * 1Sui -- 2.5 USDT
- * 1 USDT -- NGN 1,500
- * 1SUI -- NGN 2.5 * 1500
- *
- */

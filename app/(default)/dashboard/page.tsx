@@ -20,8 +20,20 @@ const Page = () => {
           <AvailablePool />
         </div>
         <div className="hidden md:flex md:w-[30%] md:justify-center border-l">
-          <div className="w-[90%] bg-[#817E7E42] p-5 rounded-xl">
+          <div className="w-[90%] bg-[#817E7E42] overflow-hidden p-3 rounded-xl">
             <h2 className="text-2xl font-bold">Supply To Pool</h2>
+            {/*<Tabs defaultValue="supplyToPool" className="w-[400px]">*/}
+            {/*<TabsList>
+        <TabsTrigger value="supplyToPool">Supply</TabsTrigger>
+        <TabsTrigger value="withdrawFromPool">Withdraw</TabsTrigger>
+      </TabsList>
+      <TabsContent className="w-full max-h-[400px] overflow-y-auto" value="supplyToPool">
+        <SupplyToPool />
+      </TabsContent>
+      <TabsContent className="w-full " value="withdrawFromPool">
+        <WithdrawFromPool />
+      </TabsContent>
+    </Tabs>*/}
             <Tabs
               defaultValue="supplyToPool"
               className="w-full flex justify-center items-center flex-col mt-3"
@@ -33,7 +45,10 @@ const Page = () => {
               <TabsContent className="w-full" value="supplyToPool">
                 <SupplyToPool />
               </TabsContent>
-              <TabsContent value="withdrawFromPool">
+              <TabsContent
+                className="w-full max-h-[31rem] overflow-y-auto"
+                value="withdrawFromPool"
+              >
                 <WithdrawFromPool />
               </TabsContent>
             </Tabs>

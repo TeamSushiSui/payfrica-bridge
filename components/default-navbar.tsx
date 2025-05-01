@@ -9,7 +9,7 @@ import { MobileNavBar } from "./mobile-nav-links";
 
 export const DefaultNavBar = () => {
   return (
-    <nav className="w-screen bg-accent/35 p-4 z-50 fixed top-0 left-0">
+    <nav className="w-screen bg-accent/70 p-4 z-50 fixed top-0 left-0">
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center gap-5">
           <Logo width={120} height={120} />
