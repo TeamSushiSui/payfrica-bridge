@@ -19,6 +19,7 @@ export const SupplyToPoolDrawer = () => {
       const qs = queryString.stringify({
         supplyToPool: false,
         poolId: q.get("poolId"),
+        type: "",
       });
       r.push(`?${qs}`);
     }
@@ -26,10 +27,13 @@ export const SupplyToPoolDrawer = () => {
 
   return (
     <Drawer
-      open={Boolean(q.get("supplyToPool") === "true" && isMobile)}
+      open={
+        (q.get("type") === "withdraw" || q.get("type") === "supplyToPool") &&
+        isMobile
+      }
       onOpenChange={handleOpenAndClose}
     >
-      <DrawerContent className="p-4 space-y-2">
+      <DrawerContent className="p-4 space-y-2 min-h-[590px]">
         <DrawerHeader className="py-2">
           <DrawerTitle className="text-3xl font-bold">
             Supply To Pool

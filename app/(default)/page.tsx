@@ -19,7 +19,9 @@ const Page = () => {
       <div className="w-full flex flex-col gap-5 py-24">
         <header className="flex items-center flex-col gap-2">
           <h2 className="font-bold text-[42px]">Payfrica Bridge</h2>
-          <p className="text-[33px]">Buy Sui with your Local Currency</p>
+          <p className="text-[33px] text-center">
+            Buy Sui with your Local Currency
+          </p>
         </header>
         <div className="max-w-4xl mx-auto px-3 w-full">
           <ConversionCard />

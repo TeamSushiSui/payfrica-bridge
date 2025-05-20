@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { FC, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn, payfricaBackendApi } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import {
@@ -12,11 +12,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { availablePools } from "@/constants";
 import { PoolListCard } from "./pool-list-card";
+import { useQuery } from "@tanstack/react-query";
+import { IRes } from "@/types/types";
 
-export const AvailablePool = () => {
-  const [showInNaira, setShowInNaira] = useState(false);
+export const AvailablePool: FC<{ isLoading?: boolean; pools: IRes[] }> = ({
+  isLoading,
+  pools = [],
+}) => {
+  console.log({ isLoading, pools });
+
+  const usdcPools = pools.filter(
+    (pool) => pool.coinName.toUpperCase() === "USDC"
+  );
 
   return (
     <Card className={cn("rounded-[8px] bg-[#1E1E1E] border-[#2A2A2A]")}>
@@ -39,7 +47,7 @@ export const AvailablePool = () => {
             <TableRow>
               <TableHead className="text-gray-400">Pool</TableHead>
               <TableHead className="text-gray-400">Price</TableHead>
-              <TableHead className="text-gray-400">Volume (24h)</TableHead>
+              {/*<TableHead className="text-gray-400">Volume (24h)</TableHead>*/}
               <TableHead className="text-gray-400">
                 <div className="flex items-center gap-1">
                   TVL
@@ -61,29 +69,16 @@ export const AvailablePool = () => {
                   </svg>
                 </div>
               </TableHead>
-              <TableHead className="text-right text-gray-400 w-[150px]">
-                <div className="flex items-center justify-end gap-2">
-                  <input
-                    type="checkbox"
-                    id="showInNaira"
-                    checked={showInNaira}
-                    onChange={(e) => setShowInNaira(e.target.checked)}
-                    className="rounded border-gray-400 text-green-500 focus:ring-green-500"
-                  />
-                  <label htmlFor="showInNaira" className="text-sm">
-                    Show in Naira
-                  </label>
-                </div>
-              </TableHead>
+              <TableHead className="text-right text-gray-400 w-[150px]" />
             </TableRow>
           </TableHeader>
           <TableBody className="text-white">
-            {availablePools.map((pool) => (
+            {usdcPools.map((pool) => (
               <PoolListCard
                 key={pool.id}
                 {...pool}
                 hiddenWithdrawalButton
-                showDetails
+                showDetails={false}
                 disableSupply={false}
               />
             ))}

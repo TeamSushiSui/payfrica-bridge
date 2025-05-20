@@ -40,11 +40,12 @@ const currencies = [
   },
 ];
 
-const currencyLogo = {
+const currencyLogo: Record<string, string> = {
   NGNC: "/naira.png",
-  USDC: "/tether.png",
+  USDC: "/usdc.png",
   SUI: "/sui.png",
   xSUI: "/sui.png",
+  GHSC: "/cedi.png",
 };
 
 export { currencies, currencyLogo };

@@ -2,7 +2,14 @@
 
 import { type FC, Fragment, type ReactNode, useState, useEffect } from "react";
 import { Button } from "./ui/button";
-import { cn, formatCurrency, getInitials } from "@/lib/utils";
+import {
+  cn,
+  formatCurrency,
+  getInitials,
+  PACKAGE_ID,
+  PAYFRICA_AGENTS,
+  payfricaBridgeApi,
+} from "@/lib/utils";
 import {
   Dialog,
   DialogClose,
@@ -15,11 +22,15 @@ import {
 } from "./ui/dialog";
 import { Separator } from "./ui/separator";
 import { agents, paymentDetails } from "@/constants";
-import { AvailableAgentCard } from "./available-agent-card";
+import queryString from "query-string";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ConversionFlowCard } from "./conversion-card";
 import { ArrowUpDown, CircleAlert, CircleCheck, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { IBestAgent } from "@/types/types";
+import { Transaction } from "@mysten/sui/transactions";
+import { useWallet } from "@suiet/wallet-kit";
+import { useRouter, useSearchParams } from "next/navigation";
 
 //Reference to chat GPT creatimer the timer function https://chatgpt.com
 
@@ -28,6 +39,10 @@ export interface IBuySuiButton {
   amountToReceive: number;
   amountToSend: number;
   children?: ReactNode;
+  inputCoinType: string;
+  outputCoinType: string;
+  rate: number;
+  decimals: number;
 }
 
 export const BuySuiButton: FC<IBuySuiButton> = ({
@@ -37,6 +52,11 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
 }) => {
   const [step, setStep] = useState(0);
   const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useState(false);
+  const [agentAccount, setAgentAccount] = useState<IBestAgent>();
+  const q = useSearchParams();
+  const wallet = useWallet();
+  const r = useRouter();
 
   const [clientActions, setClientActions] = useState({
     agentSelected: "",
@@ -102,51 +122,104 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
       .padStart(2, "0")}`;
   };
 
-  const handleClose = (e: boolean) => {
+  const handleClose = () => {
     if (step === 1) {
       setOpen(!confirm("Are you sure you want to abort this transaction?"));
       setStep(0);
       return;
     }
 
-    setOpen(e);
+    const isPaymentPending = q.get("isPaymentPending");
+
+    if (isPaymentPending === "true") {
+      r.push("?isPaymentPending=false");
+    }
+
+    setOpen(false);
     setStep(0);
   };
 
-  //const selectAgent = (
-  //  <Fragment>
-  //    <DialogHeader>
-  //      <DialogTitle>Select Agent</DialogTitle>
-  //      <DialogDescription>
-  //        Select from the available agents below to complete transaction
-  //      </DialogDescription>
-  //    </DialogHeader>
-  //    <Separator />
-  //    <div className="flex flex-col gap-5">
-  //      {agents.map((agent, idx) => (
-  //        <AvailableAgentCard
-  //          key={idx}
-  //          {...agent}
-  //          onAgentSelect={(agent: (typeof agents)[0]) => {
-  //            setClientActions({ ...clientActions, agentSelected: agent.id });
-  //            setStep(1);
-  //          }}
-  //        />
-  //      ))}
-  //    </div>
-  //    <DialogFooter>
-  //      <DialogClose asChild>
-  //        <Button>Close</Button>
-  //      </DialogClose>
-  //    </DialogFooter>
-  //  </Fragment>
-  //);
+  useEffect(() => {
+    const isPaymentPending = q.get("isPaymentPending");
+
+    if (isPaymentPending === "true") {
+      setOpen(true);
+
+      setAgentAccount({
+        accountBank: q.get("accountBank")!,
+        accountName: q.get("accountName")!,
+        accountNumber: q.get("accountNumber")!,
+        comment: q.get("comment")!,
+        id: q.get("id")!,
+      });
+    }
+  }, [q.get("isPaymentPending")]);
+
+  const buy = async () => {
+    startTransition(true);
+
+    try {
+      const q = queryString.stringify({
+        amount: amountToSend,
+        outputCoinType: props.outputCoinType,
+        inputCoinType: props.inputCoinType,
+      });
+      const res = await payfricaBridgeApi.get<IBestAgent>(`/agents/best?${q}`);
+
+      setAgentAccount(res.data);
+
+      console.log(res.data.id);
+
+      //setOpen(true);
+
+      props.inputCoinType = `0x${props.inputCoinType}`;
+      props.outputCoinType = `0x${props.outputCoinType}`;
+
+      //Calling the smart contract
+      const tx = new Transaction();
+      tx.moveCall({
+        target: `${PACKAGE_ID}::bridge_agents::deposit_requests`,
+        arguments: [
+          tx.object(PAYFRICA_AGENTS),
+          tx.object(res.data.id),
+          tx.pure.u64(amountToSend * 10 ** (props.decimals ?? 6)),
+          tx.pure.u64(props.rate * 10 ** 6),
+          tx.pure.u8(6),
+          tx.pure.string(res.data.comment),
+          tx.object("0x6"),
+        ],
+        typeArguments: [props.inputCoinType, props.outputCoinType],
+      });
+
+      const txResult = await wallet.signAndExecuteTransaction({
+        transaction: tx,
+      });
+
+      if (txResult) {
+        setOpen(true);
+
+        const q = queryString.stringify({
+          ...res.data,
+          isPaymentPending: true,
+        });
+        r.push(`?${q}`);
+      } else {
+        //Notify the user
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      startTransition(false);
+    }
+  };
 
   const makePayment = (
     <Fragment>
       <DialogHeader className="flex items-center flex-row justify-between">
         <Avatar>
-          <AvatarImage src={`https://vercel.com/api/www/avatar/s00laiman`} />
+          <AvatarImage
+            src={`https://vercel.com/api/www/avatar/${agentAccount?.id}`}
+          />
           <AvatarFallback>{getInitials("Lagos")}</AvatarFallback>
         </Avatar>
         <DialogTitle>Make Payment</DialogTitle>
@@ -161,6 +234,7 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
           amount={5000}
           hideFooter
           disabled
+          disableCurrency
           className="rounded-md w-full h-auto md:h-[8.5rem]"
         />
         <div className="absolute top-0 left-0 w-full flex h-full items-center justify-center pointer-events-none">
@@ -177,8 +251,9 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
           amount={2.47}
           hideFooter
           disabled
+          disableCurrency
           className="rounded-md w-full h-auto md:h-[8.5rem]"
-          currency="sui"
+          decimals={0}
         />
       </div>
       <div className=" bg-accent max-w-full w-full space-y-2 p-4 rounded-lg">
@@ -188,7 +263,7 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
             <CircleAlert fill="#777777" size={15} className="border-[#777777" />
           </div>
           <p className="font-semibold text-green-500">
-            {paymentDetails[0].accountNumber}
+            {agentAccount?.accountNumber}
           </p>
         </div>
         <div className="flex items-center justify-between w-full">
@@ -196,7 +271,7 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
             <h4 className="text-muted-foreground">Bank Name</h4>
             <CircleAlert fill="#777777" size={15} className="border-[#777777" />
           </div>
-          <p className="font-semibold">{paymentDetails[0].bankName}</p>
+          <p className="font-semibold">{agentAccount?.accountBank}</p>
         </div>
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1">
@@ -204,7 +279,7 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
             <CircleAlert fill="#777777" size={15} className="border-[#777777" />
           </div>
           <p className="font-semibold text-green-500">
-            {paymentDetails[0].accountName}
+            {agentAccount?.accountName}
           </p>
         </div>
         <div className="flex items-center justify-between w-full">
@@ -217,11 +292,15 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
         </div>
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1">
-            <h4 className="text-muted-foreground">Destination Address</h4>
+            <h4 className="text-muted-foreground">Agent Id</h4>
           </div>
-          <p className="font-semibold">
+          <Link
+            target="__blank"
+            href={`https://suiscan.xyz/testnet/object/${agentAccount?.id}/`}
+            className="font-semibold text-blue-500 underline"
+          >
             {paymentDetails[0].destinationAddress}
-          </p>
+          </Link>
         </div>
       </div>
       <div>
@@ -349,7 +428,6 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
   );
 
   const views = [
-    //selectAgent,
     makePayment,
     confirmingPayment,
     paymentConfirmed,
@@ -357,13 +435,25 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
   ];
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog
+      open={open}
+      onOpenChange={async (e) => {
+        if (e) {
+          await buy();
+        } else {
+          handleClose();
+        }
+      }}
+    >
       <DialogTrigger asChild>
         {props.children ? (
           props.children
         ) : (
-          <Button className={cn("bg-[#5865F2]", props.className)}>
-            Buy Sui
+          <Button
+            disabled={isPending}
+            className={cn("bg-[#5865F2]", props.className)}
+          >
+            Buy
           </Button>
         )}
       </DialogTrigger>

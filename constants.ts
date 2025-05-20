@@ -7,11 +7,6 @@ const navLinks = [
     showOnDesktop: true,
   },
   {
-    label: "Save",
-    path: "#save",
-    showOnDesktop: true,
-  },
-  {
     label: "Market",
     path: "/market",
     showOnDesktop: false,

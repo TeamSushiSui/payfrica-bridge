@@ -6,37 +6,43 @@ import { Badge } from "./ui/badge";
 import { useRouter } from "next/navigation";
 import queryString from "query-string";
 import { PoolDetails } from "./pool-details";
-
-interface Coin {
-  id: string;
-  name: string;
-  image: string;
-}
+import { currencyLogo } from "@/lib/constants";
+import { formatCurrency } from "@/lib/utils";
 
 interface PoolProps {
+  coinBalance: string;
+  coinDecimal: number;
+  coinName: string;
+  coinType: string;
+  createdAt: string;
+  defaultFees: null;
+  feeDecimal: number;
   id: string;
-  name: string;
-  coins: Coin[];
-  price: number;
-  percentage: number;
-  volume: string;
-  tvl: string | undefined;
-  hiddenWithdrawalButton?: boolean;
-  hiddenSupplyButton?: boolean;
-  showDetails?: boolean;
-  disableSupply?: boolean;
+  ratesDollar: number;
+  rewardsBalance: string;
+  amountSupplied?: number;
 }
 
-export const PoolListCard: FC<PoolProps> = ({
-  disableSupply = true,
-  ...props
-}) => {
+export const PoolListCard: FC<
+  PoolProps & {
+    disableSupply?: boolean;
+    hiddenWithdrawalButton?: boolean;
+    hiddenSupplyButton?: boolean;
+    showDetails?: boolean;
+    showAmountSupply?: boolean;
+    showBalance?: boolean;
+  }
+> = ({ disableSupply = true, ...props }) => {
   const r = useRouter();
 
-  const openSupplyToPool = () => {
+  const openSupplyToPool = (type = "supplyToPool") => {
     const qs = queryString.stringify({
-      supplyToPool: true,
       poolId: props.id,
+      coinName: props.coinName,
+      coinType: props.coinType,
+      tvl: props.coinBalance,
+      decimal: props.coinDecimal,
+      type,
     });
 
     r.push(`?${qs}`);
@@ -47,33 +53,32 @@ export const PoolListCard: FC<PoolProps> = ({
       <TableCell className="font-medium">
         <div className="flex items-center gap-2">
           <div className="flex -space-x-2 overflow-hidden">
-            {props.coins.map((coin) => (
-              <div key={coin.id} className="size-8">
-                <Image
-                  className="inline-block size-7 rounded-full ring-1 ring-white"
-                  src={coin.image || "/placeholder.svg"}
-                  alt={coin.name}
-                  width={28}
-                  height={28}
-                />
-              </div>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <span>{props.name}</span>
-            <Badge className="text-xs  rounded-sm w-fit">
-              {props.percentage}%
-            </Badge>
+            <div className="size-8">
+              <Image
+                className="inline-block size-7 rounded-full ring-1 ring-white"
+                src={currencyLogo["USDC"] || "/placeholder.svg"}
+                alt={props.coinName}
+                width={28}
+                height={28}
+              />
+            </div>
           </div>
         </div>
       </TableCell>
-      <TableCell>${props.price}</TableCell>
-      <TableCell>{props.volume}</TableCell>
-      <TableCell>{props.tvl || "None"}</TableCell>
+      <TableCell>${props.ratesDollar}</TableCell>
+      <TableCell>
+        {formatCurrency(
+          Number(props.coinBalance || 0) / Math.pow(10, props.coinDecimal),
+          { currency: "USD" }
+        ) || "None"}
+      </TableCell>
+      {props.showAmountSupply && <TableCell>{props.amountSupplied}</TableCell>}
+      {props.showBalance && <TableCell>{"Balance"}</TableCell>}
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-2">
           {!props.hiddenWithdrawalButton && (
             <Button
+              onClick={() => openSupplyToPool("withdraw")}
               variant="outline"
               size="sm"
               className="bg-transparent border-gray-600 hover:bg-[#2A2A2A] text-white"
@@ -85,7 +90,7 @@ export const PoolListCard: FC<PoolProps> = ({
             <Button
               size="sm"
               disabled={disableSupply}
-              onClick={openSupplyToPool}
+              onClick={() => openSupplyToPool()}
             >
               Supply
             </Button>

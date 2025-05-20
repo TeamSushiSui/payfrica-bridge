@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { FC, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn, getUserSuppliedPools } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import {
@@ -14,14 +14,21 @@ import {
 } from "@/components/ui/table";
 import { userPools } from "@/constants";
 import { PoolListCard } from "./pool-list-card";
+import { useWallet } from "@suiet/wallet-kit";
+import { useQuery } from "@tanstack/react-query";
+import { IRes } from "@/types/types";
 
-export const UserPool = () => {
+export const UserPool: FC<{ isLoading: boolean; pools: IRes[] }> = ({
+  pools = [],
+}) => {
+  const { address = "" } = useWallet();
   const [showInNaira, setShowInNaira] = useState(false);
+  const [filterPools, setFilterPools] = useState<IRes[]>([]);
 
   return (
     <Card className={cn("rounded-[8px] bg-[#1E1E1E] border-[#2A2A2A]")}>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-2xl text-white">Your Pools</CardTitle>
+        <CardTitle className="text-2xl text-white">Pools Supplied</CardTitle>
         <div className="w-[40%] relative">
           <Input
             className="w-full bg-[#2A2A2A] border-[#3A3A3A] text-white placeholder:text-gray-400 rounded-md"
@@ -39,7 +46,8 @@ export const UserPool = () => {
             <TableRow>
               <TableHead className="text-gray-400">Pool</TableHead>
               <TableHead className="text-gray-400">Price</TableHead>
-              <TableHead className="text-gray-400">Volume (24h)</TableHead>
+              <TableHead className="text-gray-400">Balance</TableHead>
+              <TableHead className="text-gray-400">Amount Supply</TableHead>
               <TableHead className="text-gray-400">
                 <div className="flex items-center gap-1">
                   TVL
@@ -63,23 +71,22 @@ export const UserPool = () => {
               </TableHead>
               <TableHead className="text-right text-gray-400 w-[100px]">
                 <div className="flex items-center justify-end gap-2">
-                  <input
-                    type="checkbox"
-                    id="showInNaira"
-                    checked={showInNaira}
-                    onChange={(e) => setShowInNaira(e.target.checked)}
-                    className="rounded border-gray-400 text-green-500 focus:ring-green-500"
-                  />
                   <label htmlFor="showInNaira" className="text-sm">
-                    Show in Naira
+                    Action
                   </label>
                 </div>
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="text-white">
-            {userPools.map((pool) => (
-              <PoolListCard key={pool.id} {...pool} />
+            {pools.map((pool) => (
+              <PoolListCard
+                key={pool.id}
+                {...pool}
+                showAmountSupply
+                showBalance
+                disableSupply={false}
+              />
             ))}
           </TableBody>
         </Table>
