@@ -173,22 +173,24 @@ export const ConversionFlowCard: FC<IConversionFlowCard> = ({
   const [walletBalance, setWalletBalance] = useState(0);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === "" ? 0 : Number.parseFloat(e.target.value);
+    const value = e.target.value === "" ? 0 : Number(e.target.value);
     if (!isNaN(value)) {
       onAmountChange(value);
     }
   };
 
+  console.log({ coinType });
+
   useEffect(() => {
-    if (type === "send" || !connected || !coinType) return;
+    if (type === "send" || !address || !coinType) return;
 
     const _getBalance = async () => {
-      const balance = await getCoinBalance(address!, coinType, decimals);
-      setWalletBalance(balance);
+      const balance = await getCoinBalance(address!, coinType, decimals || 6);
+      setWalletBalance(balance || 0);
     };
 
     _getBalance();
-  }, [connected, coinType]);
+  }, [address, coinType, type]);
 
   return (
     <Card

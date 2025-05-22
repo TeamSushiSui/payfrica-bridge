@@ -3,6 +3,7 @@
 import { type FC, Fragment, type ReactNode, useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import {
+  client,
   cn,
   formatCurrency,
   getInitials,
@@ -31,6 +32,8 @@ import { IBestAgent } from "@/types/types";
 import { Transaction } from "@mysten/sui/transactions";
 import { useWallet } from "@suiet/wallet-kit";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
 //Reference to chat GPT creatimer the timer function https://chatgpt.com
 
@@ -57,6 +60,7 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
   const q = useSearchParams();
   const wallet = useWallet();
   const r = useRouter();
+  const [requestId, setRequestId] = useState("");
 
   const [clientActions, setClientActions] = useState({
     agentSelected: "",
@@ -66,52 +70,45 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
   const showFooter = false;
 
   const [timeRemaining, setTimeRemaining] = useState(25 * 60); // 25 minutes in seconds
-  const [timerActive, setTimerActive] = useState(false);
+
+  const { isLoading, data, error } = useQuery({
+    queryKey: ["get-transaction-status"],
+    queryFn: async () =>
+      await payfricaBridgeApi.get<{
+        status: "Completed" | "Pending" | "Cancelled";
+      }>(`/agents/deposit-requests/${requestId}`),
+    enabled: Boolean(requestId) && step === 1,
+    refetchInterval: 2000,
+  });
+
+  console.log({ isLoading, data, error });
 
   useEffect(() => {
-    let timeOut: NodeJS.Timeout;
-    // Start timer when step === 1
-    if (step === 1) {
-      setTimerActive(true);
-    } else {
-      setTimerActive(false);
-      setTimeRemaining(25 * 60); // Reset timer when not on step 1
+    if (step && q.get("isPaymentPending")) {
+      const query = queryString.parse(location.search);
 
-      if (step === 2) {
-        timeOut = setTimeout(() => {
-          const o = [2, 3];
-
-          if (clientActions.userClaimToHaveMadePayment) {
-            setStep(2);
-          } else {
-            setStep(Math.floor(Math.random() * o.length));
-          }
-        }, 5000);
-      }
+      const q = queryString.stringify({
+        ...query,
+        isPaymentPending: true,
+        step,
+      });
+      r.push(`?${q}`);
     }
-
-    return () => {
-      clearTimeout(timeOut);
-    };
-  }, [step]);
+  }, [step, q.get("step")]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    if (q.get("step")) {
+      setStep(Number(q.get("step")));
+    }
+  }, [q.get("step")]);
 
-    if (timerActive && timeRemaining > 0) {
-      interval = setInterval(() => {
-        setTimeRemaining((prevTime) => prevTime - 1);
-      }, 1000);
-    } else if (timeRemaining === 0 && timerActive) {
-      // Handle timer expiration
-      setTimerActive(false);
+  useEffect(() => {
+    if (data?.data?.status === "Completed") {
       setStep(2);
+    } else if (data?.data?.status === "Cancelled" || error) {
+      setStep(3);
     }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [timerActive, timeRemaining, setOpen]);
+  }, [isLoading, data?.data.status]);
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -152,8 +149,14 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
         comment: q.get("comment")!,
         id: q.get("id")!,
       });
+
+      setRequestId(q.get("requestId")!);
     }
-  }, [q.get("isPaymentPending")]);
+  }, [
+    q.get("isPaymentPending"),
+    q.get("amountToSend"),
+    q.get("amountToRecieve"),
+  ]);
 
   const buy = async () => {
     startTransition(true);
@@ -168,12 +171,12 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
 
       setAgentAccount(res.data);
 
-      console.log(res.data.id);
-
       //setOpen(true);
 
       props.inputCoinType = `0x${props.inputCoinType}`;
       props.outputCoinType = `0x${props.outputCoinType}`;
+
+      console.log(props);
 
       //Calling the smart contract
       const tx = new Transaction();
@@ -196,12 +199,24 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
       });
 
       if (txResult) {
+        const queryEvent = await client.queryEvents({
+          query: { Transaction: txResult.digest },
+        });
+
+        //@ts-ignore
+        setRequestId(queryEvent.data[0].parsedJson?.request_id);
+
         setOpen(true);
 
         const q = queryString.stringify({
           ...res.data,
+          amountToReceive,
+          amountToSend,
           isPaymentPending: true,
+          //@ts-ignore
+          requestId: queryEvent.data[0].parsedJson?.request_id,
         });
+        setStep(0);
         r.push(`?${q}`);
       } else {
         //Notify the user
@@ -231,7 +246,7 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
         <ConversionFlowCard
           onAmountChange={() => {}}
           onCurrencySelect={() => {}}
-          amount={5000}
+          amount={amountToSend || Number(q.get("amountToSend") || 0)}
           hideFooter
           disabled
           disableCurrency
@@ -248,7 +263,7 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
         <ConversionFlowCard
           onAmountChange={() => {}}
           onCurrencySelect={() => {}}
-          amount={2.47}
+          amount={amountToReceive || Number(q.get("amountToSend")) || 0}
           hideFooter
           disabled
           disableCurrency
@@ -310,7 +325,7 @@ export const BuySuiButton: FC<IBuySuiButton> = ({
               ...clientActions,
               userClaimToHaveMadePayment: true,
             });
-            setStep(2);
+            setStep(1);
           }}
           className="hover:bg-[#5865F2]/80 bg-[#443CC7] text-white w-full md:h-[53px] h-[48px] cursor-pointer"
         >

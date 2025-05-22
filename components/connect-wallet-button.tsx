@@ -27,7 +27,7 @@ export const ConnectWalletButton: FC<{ children?: ReactNode }> = ({
         <PopoverTrigger asChild>
           <Button>
             <Wallet size={18} />
-            {wallet.address?.slice(0, 3) + "..." + wallet.address?.slice(-10)}
+            {wallet.address?.slice(0, 3) + "..." + wallet.address?.slice(-8)}
           </Button>
         </PopoverTrigger>
         <PopoverContent>
