@@ -137,7 +137,6 @@ export const SupplyToPool = () => {
 
   useEffect(() => {
     if (percentage) {
-      console.log(percentages[percentage] / 100);
       setAmount(balance * (percentages[percentage] / 100));
     }
   }, [percentage]);
@@ -215,11 +214,11 @@ export const SupplyToPool = () => {
       <Button
         onClick={() => {
           if (q.get("type") === "withdraw") {
-            handleAddtoLiquidity();
+            handleRemoveLiquidity();
           }
 
           if (q.get("type") === "supplyToPool") {
-            handleRemoveLiquidity();
+            handleAddtoLiquidity();
           }
         }}
         disabled={amount > balance || isPending || amount <= 0}

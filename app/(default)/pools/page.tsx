@@ -1,20 +1,16 @@
 "use client";
 
 import { AvailablePool } from "@/components/available-pools";
-import { BalanceCard } from "@/components/balance-card";
 import { SupplyToPool } from "@/components/supply-to-pool";
 import { SupplyToPoolDrawer } from "@/components/supply-to-pool-drawer";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserPool } from "@/components/user-pool";
-import { WithdrawFromPool } from "@/components/withdraw-from-pool";
 import { getUserSuppliedPools, payfricaBackendApi } from "@/lib/utils";
 import { IRes } from "@/types/types";
 import { useWallet } from "@suiet/wallet-kit";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
-import queryString from "query-string";
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 
 const Page = () => {
   const q = useSearchParams();
@@ -37,7 +33,7 @@ const Page = () => {
   });
 
   useEffect(() => {
-    if (!pools.length || !data?.length) return;
+    if (!pools.length) return;
 
     const usdcPools = pools.filter(
       (pool) => pool.coinName.toUpperCase() === "USDC"
@@ -48,18 +44,22 @@ const Page = () => {
 
     //iterate through available pools
     usdcPools.forEach((pool) => {
-      data?.forEach((d) => {
-        if (pool.id === d.pool_id) {
-          setUserPools((prev) => [
-            ...prev,
-            { ...pool, amountSupplied: Number(d.amount_added) },
-          ]);
-        } else {
-          setAvailablePools((prev) => [...prev, pool]);
-        }
-      });
+      if (!!data?.length) {
+        data?.forEach((d) => {
+          if (pool.id === d.pool_id) {
+            setUserPools((prev) => [
+              ...prev,
+              { ...pool, amountSupplied: Number(d.amount_added) },
+            ]);
+          } else {
+            setAvailablePools((prev) => [...prev, pool]);
+          }
+        });
+      } else {
+        setAvailablePools((prev) => [...prev, pool]);
+      }
     });
-  }, [pools, data]);
+  }, [pools?.length, data?.length]);
 
   useEffect(() => {
     setActiveTab(
@@ -73,28 +73,29 @@ const Page = () => {
   //const q = queryString.parse()
 
   return (
-    <section className="py-24 w-screen h-screen">
-      <SupplyToPoolDrawer />
-      <section className="container mx-auto px-3 flex md:px-0 md:h-[90vh] overflow-hidden py-4">
-        <div className="md:w-[70%] w-full md:px-5 space-y-7 overflow-auto h-full">
-          {/*<BalanceCard />*/}
+    <Suspense fallback={<p>Loading...</p>}>
+      <section className="py-24 w-screen h-screen">
+        <SupplyToPoolDrawer />
+        <section className="container mx-auto px-3 flex md:px-0 md:h-[90vh] overflow-hidden py-4">
+          <div className="md:w-[70%] w-full md:px-5 space-y-7 overflow-auto h-full">
+            {/*<BalanceCard />*/}
 
-          <UserPool pools={userPools} isLoading={isLoading} />
+            <UserPool pools={userPools} isLoading={isLoading} />
 
-          <AvailablePool isLoading={isLoading} pools={availablePools} />
-        </div>
-        <div className="hidden md:flex md:w-[30%] md:justify-center border-l">
-          <div className="w-[90%] bg-[#817E7E42] overflow-hidden p-3 rounded-xl">
-            <h2 className="text-2xl font-bold mb-3">
-              {q.get("type") === "supplyToPool"
-                ? "Supply To Pool"
-                : "Withdraw From Pool"}
-            </h2>
-            <Separator />
-            {/*<Tabs defaultValue="supplyToPool" className="w-[400px]">*/}
+            <AvailablePool isLoading={isLoading} pools={availablePools} />
+          </div>
+          <div className="hidden md:flex md:w-[30%] md:justify-center border-l">
+            <div className="w-[90%] bg-[#817E7E42] overflow-hidden p-3 rounded-xl">
+              <h2 className="text-2xl font-bold mb-3">
+                {q.get("type") === "supplyToPool"
+                  ? "Supply To Pool"
+                  : "Withdraw From Pool"}
+              </h2>
+              <Separator />
+              {/*<Tabs defaultValue="supplyToPool" className="w-[400px]">*/}
 
-            <SupplyToPool />
-            {/*<Tabs
+              <SupplyToPool />
+              {/*<Tabs
               value={activeTab}
               onValueChange={(e) => setActiveTab(e)}
               defaultValue="supplyToPool"
@@ -117,10 +118,11 @@ const Page = () => {
                 <WithdrawFromPool />
               </TabsContent>
             </Tabs>*/}
+            </div>
           </div>
-        </div>
+        </section>
       </section>
-    </section>
+    </Suspense>
   );
 };
 
